@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bee Swarm Fan Game</title>
+<title>Bee Swarm Fan Game with Sky</title>
 <style>
   body { margin: 0; overflow: hidden; background: #87ceeb; }
   #ui {
@@ -27,19 +27,37 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
 <script>
-/* ===== SETUP ===== */
+// ===== SETUP =====
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
 
-/* ===== LIGHT ===== */
+// ===== SKYBOX =====
+const loader = new THREE.CubeTextureLoader();
+const skyTexture = loader.load([
+  'https://threejs.org/examples/textures/cube/skybox/px.jpg',
+  'https://threejs.org/examples/textures/cube/skybox/nx.jpg',
+  'https://threejs.org/examples/textures/cube/skybox/py.jpg',
+  'https://threejs.org/examples/textures/cube/skybox/ny.jpg',
+  'https://threejs.org/examples/textures/cube/skybox/pz.jpg',
+  'https://threejs.org/examples/textures/cube/skybox/nz.jpg'
+]);
+scene.background = skyTexture;
+
+// ===== LIGHT =====
 const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(5,10,5);
 scene.add(light);
 
-/* ===== GROUND ===== */
+// ===== CAMERA =====
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+camera.position.set(0,6,8);
+camera.lookAt(0,0,0);
+
+// ===== RENDERER =====
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ===== GROUND =====
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(100,100),
   new THREE.MeshStandardMaterial({ color: 0x3cb043 })
@@ -47,7 +65,7 @@ const ground = new THREE.Mesh(
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-/* ===== PLAYER ===== */
+// ===== PLAYER =====
 const player = new THREE.Mesh(
   new THREE.BoxGeometry(1,1,1),
   new THREE.MeshStandardMaterial({ color: 0xffd700 })
@@ -55,7 +73,7 @@ const player = new THREE.Mesh(
 player.position.y = 0.5;
 scene.add(player);
 
-/* ===== HIVE ===== */
+// ===== HIVE =====
 const hive = new THREE.Mesh(
   new THREE.CylinderGeometry(1,1,2,6),
   new THREE.MeshStandardMaterial({ color: 0xffff99 })
@@ -63,7 +81,7 @@ const hive = new THREE.Mesh(
 hive.position.set(0,1,-10);
 scene.add(hive);
 
-/* ===== BEES ===== */
+// ===== BEES =====
 const bees = [];
 for(let i=0;i<3;i++){
   const bee = new THREE.Mesh(
@@ -75,7 +93,7 @@ for(let i=0;i<3;i++){
   bees.push({ mesh: bee, inHive: false });
 }
 
-/* ===== FLOWERS ===== */
+// ===== FLOWERS =====
 const flowers = [];
 for(let i=0;i<20;i++){
   const flower = new THREE.Mesh(
@@ -91,7 +109,7 @@ for(let i=0;i<20;i++){
   flowers.push(flower);
 }
 
-/* ===== BEAR QUESTS ===== */
+// ===== BEAR QUESTS =====
 const bears = [];
 const quests = [];
 for(let i=0;i<2;i++){
@@ -103,7 +121,6 @@ for(let i=0;i<2;i++){
   scene.add(bear);
   bears.push(bear);
 
-  // Each bear has a quest: random pollen goal 5-15
   quests.push({
     bear: bear,
     goal: Math.floor(Math.random()*11)+5,
@@ -112,7 +129,7 @@ for(let i=0;i<2;i++){
   });
 }
 
-/* ===== CONTROLS ===== */
+// ===== CONTROLS =====
 const keys = {};
 onkeydown = e => keys[e.key.toLowerCase()] = true;
 onkeyup = e => keys[e.key.toLowerCase()] = false;
@@ -120,11 +137,7 @@ onkeyup = e => keys[e.key.toLowerCase()] = false;
 let pollen = 0;
 let hivePollen = 0;
 
-/* ===== CAMERA ===== */
-camera.position.set(0,6,8);
-camera.lookAt(player.position);
-
-/* ===== GAME LOOP ===== */
+// ===== GAME LOOP =====
 function animate(){
   requestAnimationFrame(animate);
 
@@ -176,10 +189,9 @@ function animate(){
   // Bear quest interaction
   quests.forEach(q=>{
     if(player.position.distanceTo(q.bear.position)<2){
-      // activate quest
       q.active = true;
       document.getElementById("questText").innerText = `Bring ${q.goal - q.collected} pollen to bear`;
-      if(keys.e && pollen>0){ // press E to give pollen
+      if(keys.e && pollen>0){
         const give = Math.min(pollen, q.goal - q.collected);
         pollen -= give;
         q.collected += give;
@@ -187,7 +199,6 @@ function animate(){
 
         if(q.collected >= q.goal){
           alert(`Quest complete! Bear gave you 1 bee!`);
-          // Add a bee to hive if there is space
           const freeBee = bees.find(b=>b.inHive === false);
           if(freeBee){
             freeBee.inHive = true;
@@ -195,13 +206,12 @@ function animate(){
             document.getElementById("hiveCount").innerText = bees.filter(b=>b.inHive).length;
           }
           q.collected = 0;
-          q.goal = Math.floor(Math.random()*11)+5; // new random quest
+          q.goal = Math.floor(Math.random()*11)+5;
         }
       }
     } else if(!q.active){
       document.getElementById("questText").innerText = "None";
     } else {
-      // player left bear area
       document.getElementById("questText").innerText = `Bring ${q.goal - q.collected} pollen to bear`;
     }
   });
