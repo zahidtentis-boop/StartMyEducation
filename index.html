@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bee Swarm Fan Game</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #87ceeb; }
+  #ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-family: Arial;
+    font-size: 18px;
+  }
+  #ui div { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div>🐝 Pollen: <span id="pollen">0</span></div>
+  <div>🏠 Hive Pollen: <span id="hivePollen">0</span></div>
+  <div>🟡 Bees in Hive: <span id="hiveCount">0</span>/3</div>
+  <div>🧸 Quest: <span id="questText">None</span></div>
+  <div>Press H near hive to deposit a bee</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
+<script>
+/* ===== SETUP ===== */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* ===== LIGHT ===== */
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5,10,5);
+scene.add(light);
+
+/* ===== GROUND ===== */
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(100,100),
+  new THREE.MeshStandardMaterial({ color: 0x3cb043 })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+/* ===== PLAYER ===== */
+const player = new THREE.Mesh(
+  new THREE.BoxGeometry(1,1,1),
+  new THREE.MeshStandardMaterial({ color: 0xffd700 })
+);
+player.position.y = 0.5;
+scene.add(player);
+
+/* ===== HIVE ===== */
+const hive = new THREE.Mesh(
+  new THREE.CylinderGeometry(1,1,2,6),
+  new THREE.MeshStandardMaterial({ color: 0xffff99 })
+);
+hive.position.set(0,1,-10);
+scene.add(hive);
+
+/* ===== BEES ===== */
+const bees = [];
+for(let i=0;i<3;i++){
+  const bee = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3),
+    new THREE.MeshStandardMaterial({ color: 0xffcc00 })
+  );
+  bee.position.set(i-1,1,1);
+  scene.add(bee);
+  bees.push({ mesh: bee, inHive: false });
+}
+
+/* ===== FLOWERS ===== */
+const flowers = [];
+for(let i=0;i<20;i++){
+  const flower = new THREE.Mesh(
+    new THREE.ConeGeometry(0.3,1),
+    new THREE.MeshStandardMaterial({ color: 0xff69b4 })
+  );
+  flower.position.set(
+    Math.random()*40-20,
+    0.5,
+    Math.random()*40-20
+  );
+  scene.add(flower);
+  flowers.push(flower);
+}
+
+/* ===== BEAR QUESTS ===== */
+const bears = [];
+const quests = [];
+for(let i=0;i<2;i++){
+  const bear = new THREE.Mesh(
+    new THREE.BoxGeometry(1,1.5,1),
+    new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+  );
+  bear.position.set(Math.random()*40-20,0.75,Math.random()*40-20);
+  scene.add(bear);
+  bears.push(bear);
+
+  // Each bear has a quest: random pollen goal 5-15
+  quests.push({
+    bear: bear,
+    goal: Math.floor(Math.random()*11)+5,
+    collected: 0,
+    active: false,
+  });
+}
+
+/* ===== CONTROLS ===== */
+const keys = {};
+onkeydown = e => keys[e.key.toLowerCase()] = true;
+onkeyup = e => keys[e.key.toLowerCase()] = false;
+
+let pollen = 0;
+let hivePollen = 0;
+
+/* ===== CAMERA ===== */
+camera.position.set(0,6,8);
+camera.lookAt(player.position);
+
+/* ===== GAME LOOP ===== */
+function animate(){
+  requestAnimationFrame(animate);
+
+  // Player movement
+  if(keys.w) player.position.z -= 0.2;
+  if(keys.s) player.position.z += 0.2;
+  if(keys.a) player.position.x -= 0.2;
+  if(keys.d) player.position.x += 0.2;
+
+  camera.position.x = player.position.x;
+  camera.position.z = player.position.z + 8;
+
+  // Bees follow player if not in hive
+  bees.forEach((bee)=>{
+    if(!bee.inHive){
+      bee.mesh.position.x += (player.position.x - bee.mesh.position.x) * 0.05;
+      bee.mesh.position.z += (player.position.z - bee.mesh.position.z) * 0.05;
+      bee.mesh.position.y = 1 + Math.sin(Date.now()*0.005)*0.2;
+    }
+  });
+
+  // Collect pollen from flowers
+  flowers.forEach((flower, i)=>{
+    if(flower.position.distanceTo(player.position) < 1){
+      scene.remove(flower);
+      flowers.splice(i,1);
+      pollen += 1;
+      document.getElementById("pollen").innerText = pollen;
+    }
+  });
+
+  // Deposit bee into hive
+  if(keys.h && player.position.distanceTo(hive.position) < 2){
+    const beeToHive = bees.find(b=>!b.inHive);
+    if(beeToHive){
+      beeToHive.inHive = true;
+      beeToHive.mesh.visible = false;
+      document.getElementById("hiveCount").innerText = bees.filter(b=>b.inHive).length;
+    }
+  }
+
+  // Automatic pollen collection from hive
+  const hiveBees = bees.filter(b=>b.inHive).length;
+  if(hiveBees>0){
+    hivePollen += 0.01 * hiveBees; // each bee adds 0.01 pollen per frame
+    document.getElementById("hivePollen").innerText = Math.floor(hivePollen);
+  }
+
+  // Bear quest interaction
+  quests.forEach(q=>{
+    if(player.position.distanceTo(q.bear.position)<2){
+      // activate quest
+      q.active = true;
+      document.getElementById("questText").innerText = `Bring ${q.goal - q.collected} pollen to bear`;
+      if(keys.e && pollen>0){ // press E to give pollen
+        const give = Math.min(pollen, q.goal - q.collected);
+        pollen -= give;
+        q.collected += give;
+        document.getElementById("pollen").innerText = pollen;
+
+        if(q.collected >= q.goal){
+          alert(`Quest complete! Bear gave you 1 bee!`);
+          // Add a bee to hive if there is space
+          const freeBee = bees.find(b=>b.inHive === false);
+          if(freeBee){
+            freeBee.inHive = true;
+            freeBee.mesh.visible = false;
+            document.getElementById("hiveCount").innerText = bees.filter(b=>b.inHive).length;
+          }
+          q.collected = 0;
+          q.goal = Math.floor(Math.random()*11)+5; // new random quest
+        }
+      }
+    } else if(!q.active){
+      document.getElementById("questText").innerText = "None";
+    } else {
+      // player left bear area
+      document.getElementById("questText").innerText = `Bring ${q.goal - q.collected} pollen to bear`;
+    }
+  });
+
+  renderer.render(scene,camera);
+}
+
+animate();
+</script>
+</body>
+</html>
