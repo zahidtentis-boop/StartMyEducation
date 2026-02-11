@@ -1,251 +1,171 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bee Style 3D</title>
-  <style>
-    body { margin:0; overflow:hidden; font-family:Arial; }
-
-    #ui {
-      position:fixed;
-      top:10px;
-      left:50%;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,0.75);
-      color:white;
-      padding:10px 20px;
-      border-radius:10px;
-      display:flex;
-      gap:30px;
-      z-index:10;
-      font-size:18px;
-    }
-
-    #inventory {
-      position:fixed;
-      bottom:10px;
-      left:50%;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,0.8);
-      padding:10px;
-      border-radius:10px;
-      display:flex;
-      gap:10px;
-      z-index:10;
-    }
-
-    .slot {
-      width:60px;
-      height:60px;
-      background:#222;
-      border:2px solid #666;
-      border-radius:6px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:white;
-      font-size:12px;
-    }
-
-    .egg {
-      width:50px;
-      height:50px;
-      background:radial-gradient(circle at top, #fff, #ddd);
-      border-radius:50%;
-      cursor:grab;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:black;
-      font-weight:bold;
-    }
-
-    #popup {
-      position:fixed;
-      bottom:90px;
-      left:50%;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,0.8);
-      color:white;
-      padding:10px 20px;
-      border-radius:10px;
-      display:none;
-      z-index:10;
-    }
-  </style>
+<title>Bee Game 3D</title>
+<style>
+body{margin:0;overflow:hidden;font-family:Arial}
+#top{position:fixed;top:10px;left:50%;transform:translateX(-50%);
+background:rgba(0,0,0,.8);color:#fff;padding:10px 20px;border-radius:10px;
+display:flex;gap:20px;z-index:10}
+#inv{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);
+background:rgba(0,0,0,.85);padding:10px;border-radius:10px;display:flex;gap:10px;z-index:10}
+.slot{width:60px;height:60px;background:#222;border:2px solid #555;border-radius:6px;
+display:flex;align-items:center;justify-content:center;color:white;font-size:11px}
+.item{width:50px;height:50px;border-radius:50%;cursor:grab;
+display:flex;align-items:center;justify-content:center;font-size:10px}
+.basic{background:#eee}
+.rare{background:#4fc3f7}
+.epic{background:#ab47bc}
+#msg{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+background:rgba(0,0,0,.8);color:white;padding:10px 20px;border-radius:10px;display:none}
+</style>
 </head>
 <body>
 
-<div id="ui">
-  🌼 Pollen: <span id="pollen">0</span>
-  🍯 Honey: <span id="honey">0</span>
+<div id="top">
+🌼 <span id="pollen">0</span>/<span id="cap">100</span>
+🍯 <span id="honey">0</span>
+🐝 <span id="beeCount">0</span>
 </div>
 
-<div id="popup"></div>
+<div id="msg"></div>
 
-<!-- INVENTORY -->
-<div id="inventory">
-  <div class="slot" id="invSlot">
-    <div class="egg" draggable="true" id="basicEgg">Basic Egg</div>
-  </div>
+<div id="inv">
+<div class="slot"><div class="item basic" draggable="true" data-type="basic">Basic</div></div>
+<div class="slot"><div class="item rare" draggable="true" data-type="rare">Rare</div></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 <script>
-/* SCENE SETUP */
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
-
-const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-camera.position.set(0,10,20);
-
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.AmbientLight(0xffffff,0.6));
-const sun = new THREE.DirectionalLight(0xffffff,1);
-sun.position.set(10,30,10);
-scene.add(sun);
+/* SCENE */
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87ceeb);
+const cam=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,1000);
+cam.position.set(0,10,20);
+const r=new THREE.WebGLRenderer({antialias:true});
+r.setSize(innerWidth,innerHeight);
+document.body.appendChild(r.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,.6));
+const sun=new THREE.DirectionalLight(0xffffff,1);
+sun.position.set(10,30,10);scene.add(sun);
 
 /* GROUND */
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(300,300),
-  new THREE.MeshStandardMaterial({color:0x4caf50})
-);
-ground.rotation.x = -Math.PI/2;
-scene.add(ground);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(500,500),
+new THREE.MeshStandardMaterial({color:0x4caf50}));
+ground.rotation.x=-Math.PI/2;scene.add(ground);
 
 /* PLAYER */
-const player = new THREE.Mesh(
-  new THREE.BoxGeometry(1,1,1),
-  new THREE.MeshStandardMaterial({color:0xffff00})
-);
-player.position.y = 0.5;
-scene.add(player);
+const player=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),
+new THREE.MeshStandardMaterial({color:0xffff00}));
+player.position.y=.5;scene.add(player);
 
 /* STATS */
-let pollen = 0;
-let honey = 0;
-let bees = [];
+let pollen=0,cap=100,honey=0;
+const bees=[];
 
 /* ZONES */
-const zones = [];
-function makeZone(x,z,color){
-  const zone = new THREE.Mesh(
-    new THREE.BoxGeometry(20,0.1,20),
-    new THREE.MeshStandardMaterial({color})
-  );
-  zone.position.set(x,0.05,z);
-  scene.add(zone);
-  zones.push(zone);
-}
-makeZone(0,0,0x66ff66);
-makeZone(30,0,0x88ff88);
-makeZone(-30,0,0x55cc55);
-
-/* SHOP */
-const shop = new THREE.Mesh(
-  new THREE.BoxGeometry(8,6,8),
-  new THREE.MeshStandardMaterial({color:0xffc107})
-);
-shop.position.set(40,3,40);
-scene.add(shop);
+const zones=[];
+[[0,0],[30,0],[-30,0],[0,30],[0,-30],[60,0]].forEach((p,i)=>{
+const z=new THREE.Mesh(new THREE.BoxGeometry(20,.1,20),
+new THREE.MeshStandardMaterial({color:0x66ff66+i*2000}));
+z.position.set(p[0],.05,p[1]);scene.add(z);zones.push(z);
+});
 
 /* HIVE */
-const hiveSlots = [];
+const hiveSlots=[];
 for(let i=0;i<5;i++){
-  const slot = new THREE.Mesh(
-    new THREE.BoxGeometry(1,1,0.3),
-    new THREE.MeshStandardMaterial({color:0xffffff})
-  );
-  slot.position.set(i*1.3-3, 1.5, -60);
-  scene.add(slot);
-  hiveSlots.push(slot);
+const s=new THREE.Mesh(new THREE.BoxGeometry(1,1,.3),
+new THREE.MeshStandardMaterial({color:0xffffff}));
+s.position.set(i*1.3-3,1.5,-60);
+scene.add(s);hiveSlots.push(s);
 }
 
-/* BASIC BEE */
-function spawnBasicBee(){
-  const bee = new THREE.Mesh(
-    new THREE.SphereGeometry(0.3,16,16),
-    new THREE.MeshStandardMaterial({color:0xffff00})
-  );
-  scene.add(bee);
-  bees.push(bee);
+/* BEAR */
+const bear=new THREE.Mesh(new THREE.BoxGeometry(2,2,2),
+new THREE.MeshStandardMaterial({color:0x3e2723}));
+bear.position.set(-40,1,-40);scene.add(bear);
+let questDone=false;
+
+/* BEES */
+function spawnBee(type){
+const stars=type==="basic"?1:type==="rare"?3:5;
+const b=new THREE.Mesh(new THREE.SphereGeometry(.3,16,16),
+new THREE.MeshStandardMaterial({color:0xffeb3b}));
+b.stars=stars;
+scene.add(b);bees.push(b);
 }
 
-/* CONTROLS */
-const keys = {};
-addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+/* INPUT */
+const keys={};
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
 /* INVENTORY DRAG */
-const egg = document.getElementById("basicEgg");
-egg.addEventListener("dragstart", e=>{
-  e.dataTransfer.setData("text/plain","egg");
+document.querySelectorAll(".item").forEach(it=>{
+it.ondragstart=e=>e.dataTransfer.setData("type",it.dataset.type);
 });
 
-/* DROP ON HIVE */
-let eggUsed = false;
-window.addEventListener("mouseup", ()=>{
-  if(eggUsed) return;
-  hiveSlots.forEach(slot=>{
-    if(player.position.distanceTo(slot.position)<5){
-      eggUsed = true;
-      egg.remove();
-      spawnBasicBee();
-      show("🐣 Basic Bee Hatched!");
-    }
-  });
+/* DROP → HIVE */
+onmouseup=()=>{
+hiveSlots.forEach(s=>{
+if(player.position.distanceTo(s.position)<4){
+spawnBee("basic");
+msg("🐣 Bee Hatched!");
+}
 });
+};
 
 /* UI */
-const popup = document.getElementById("popup");
-function show(t){ popup.innerText=t; popup.style.display="block"; }
-function hide(){ popup.style.display="none"; }
+const m=document.getElementById("msg");
+function msg(t){m.innerText=t;m.style.display="block";setTimeout(()=>m.style.display="none",1500);}
 
 /* LOOP */
-function animate(){
-  requestAnimationFrame(animate);
+function loop(){
+requestAnimationFrame(loop);
 
-  if(keys.w) player.position.z -= 0.25;
-  if(keys.s) player.position.z += 0.25;
-  if(keys.a) player.position.x -= 0.25;
-  if(keys.d) player.position.x += 0.25;
+if(keys.w)player.position.z-=.3;
+if(keys.s)player.position.z+=.3;
+if(keys.a)player.position.x-=.3;
+if(keys.d)player.position.x+=.3;
 
-  camera.position.x = player.position.x;
-  camera.position.z = player.position.z + 20;
-  camera.lookAt(player.position);
+cam.position.x=player.position.x;
+cam.position.z=player.position.z+20;
+cam.lookAt(player.position);
 
-  zones.forEach(z=>{
-    if(player.position.distanceTo(z.position)<5){
-      pollen += bees.length * 0.3 + 0.2;
-    }
-  });
-
-  if(pollen>=10){
-    pollen-=10;
-    honey++;
-  }
-
-  bees.forEach((b,i)=>{
-    b.position.x = player.position.x + Math.sin(i)*1.5;
-    b.position.z = player.position.z + Math.cos(i)*1.5;
-    b.position.y = 1;
-  });
-
-  document.getElementById("pollen").innerText=Math.floor(pollen);
-  document.getElementById("honey").innerText=honey;
-
-  renderer.render(scene,camera);
+zones.forEach(z=>{
+if(player.position.distanceTo(z.position)<5 && pollen<cap){
+let rate=1;
+bees.forEach(b=>rate+=b.stars*.1);
+pollen+=rate;
 }
-animate();
-
-addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
 });
-</script>
 
+if(pollen>=10){pollen-=10;honey++;}
+
+if(!questDone && pollen>=50){
+questDone=true;honey+=10;
+msg("🐻 Quest complete! +10 Honey");
+}
+
+bees.forEach((b,i)=>{
+b.position.set(player.position.x+Math.sin(i)*2,1,
+player.position.z+Math.cos(i)*2);
+});
+
+document.getElementById("pollen").innerText=Math.floor(pollen);
+document.getElementById("cap").innerText=cap;
+document.getElementById("honey").innerText=honey;
+document.getElementById("beeCount").innerText=bees.length;
+
+r.render(scene,cam);
+}
+loop();
+
+onresize=()=>{
+cam.aspect=innerWidth/innerHeight;
+cam.updateProjectionMatrix();
+r.setSize(innerWidth,innerHeight);
+};
+</script>
 </body>
 </html>
