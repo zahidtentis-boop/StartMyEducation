@@ -1,139 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bee Swarm School Edition</title>
+  <title>Bee Style Game</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: Arial; }
-    #ui {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #8fd16a;
+      text-align: center;
+    }
+
+    /* TOP BAR */
+    #topbar {
+      background: #222;
       color: white;
-      padding: 10px 20px;
-      display: none;
+      padding: 10px;
+      display: flex;
+      justify-content: space-around;
+      font-size: 20px;
     }
-    #shop {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #ffd84d;
-      border: 5px solid #b38f00;
-      padding: 20px;
-      display: none;
-      width: 300px;
+
+    /* GAME AREA */
+    #game {
+      margin-top: 50px;
     }
-    button {
-      width: 100%;
-      margin-top: 5px;
-      padding: 5px;
+
+    #flower {
+      width: 120px;
+      height: 120px;
+      background: yellow;
+      border-radius: 50%;
+      margin: 40px auto;
       cursor: pointer;
+      box-shadow: 0 0 20px gold;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      background: #ffb703;
     }
   </style>
 </head>
 <body>
 
-<div id="ui">Press E to open shop</div>
-
-<div id="shop">
-  <h2>Bee Shop</h2>
-  <p>Honey: <span id="honey">100</span></p>
-  <button onclick="buy('Basic Egg', 50)">Buy Basic Egg (50)</button>
-  <button onclick="buy('Treat', 10)">Buy Treat (10)</button>
-  <button onclick="buy('Royal Jelly', 25)">Buy Royal Jelly (25)</button>
-  <button onclick="closeShop()">Close</button>
+<!-- TOP INDICATORS -->
+<div id="topbar">
+  <div>🌼 Pollen: <span id="pollen">0</span></div>
+  <div>🍯 Honey: <span id="honey">0</span></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<!-- GAME -->
+<div id="game">
+  <h1>Bee Game</h1>
+  <p>Click the flower to collect pollen</p>
+
+  <div id="flower" onclick="collect()"></div>
+
+  <button onclick="convert()">Convert Pollen → Honey</button>
+</div>
 
 <script>
-let scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+  let pollen = 0;
+  let honey = 0;
 
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-let renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// Light
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
-
-// Ground
-let ground = new THREE.Mesh(
-  new THREE.BoxGeometry(100, 1, 100),
-  new THREE.MeshStandardMaterial({ color: 0x4caf50 })
-);
-ground.position.y = -0.5;
-scene.add(ground);
-
-// Player
-let player = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 2, 1),
-  new THREE.MeshStandardMaterial({ color: 0x0000ff })
-);
-player.position.y = 1;
-scene.add(player);
-
-// Shop building
-let shop = new THREE.Mesh(
-  new THREE.BoxGeometry(6, 4, 6),
-  new THREE.MeshStandardMaterial({ color: 0xffc107 })
-);
-shop.position.set(10, 2, 0);
-scene.add(shop);
-
-// Movement
-let keys = {};
-document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-
-let honey = 100;
-let nearShop = false;
-
-function buy(item, cost) {
-  if (honey >= cost) {
-    honey -= cost;
-    document.getElementById("honey").textContent = honey;
-    alert("Bought " + item);
-  } else {
-    alert("Not enough honey!");
+  function collect() {
+    pollen += 5;
+    update();
   }
-}
 
-function closeShop() {
-  document.getElementById("shop").style.display = "none";
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  if (keys["w"]) player.position.z -= 0.1;
-  if (keys["s"]) player.position.z += 0.1;
-  if (keys["a"]) player.position.x -= 0.1;
-  if (keys["d"]) player.position.x += 0.1;
-
-  camera.position.set(
-    player.position.x,
-    player.position.y + 5,
-    player.position.z + 10
-  );
-  camera.lookAt(player.position);
-
-  // Distance check to shop
-  nearShop = player.position.distanceTo(shop.position) < 5;
-  document.getElementById("ui").style.display = nearShop ? "block" : "none";
-
-  renderer.render(scene, camera);
-}
-animate();
-
-document.addEventListener("keydown", e => {
-  if (e.key.toLowerCase() === "e" && nearShop) {
-    document.getElementById("shop").style.display = "block";
+  function convert() {
+    if (pollen >= 10) {
+      let made = Math.floor(pollen / 10);
+      pollen -= made * 10;
+      honey += made;
+      update();
+    }
   }
-});
+
+  function update() {
+    document.getElementById("pollen").innerText = pollen;
+    document.getElementById("honey").innerText = honey;
+  }
 </script>
 
 </body>
